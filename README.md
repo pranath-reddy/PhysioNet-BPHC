@@ -8,7 +8,7 @@ This classifier uses three scripts:
 * `get_12ECG_features.py` extract the features from the clinical time-series data. This script and function are optional, but we have included it as an example.
 * `driver.py` calls `load_12ECG_model` once and `run_12ECG_classifier` many times. Both functions are in `run_12ECG_classifier.py` file. This script also performs all file input and output. Please **do not** edit this script or we may be unable to evaluate your submission.
 
-## Use
+## Usage
 
 You can run this classifier by installing the packages in the `requirements.txt` file and running
 
