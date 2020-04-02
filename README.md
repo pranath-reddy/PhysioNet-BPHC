@@ -15,12 +15,3 @@ You can run this classifier by installing the packages in the `requirements.txt`
     python driver.py input_directory output_directory
 
 where `input_directory` is a directory for input data files and `output_directory` is a directory for output classification files. The PhysioNet/CinC 2020 webpage provides a training database with data files and a description of the contents and structure of these files.
-
-## Submission
-
-The `driver.py`, `run_12ECG_classifier.py`, and `get_12ECG_features.py` scripts need to be in the base or root path of the Github repository. If they are inside a subfolder, then the submission will fail.
-
-## Details
-“The baseline classifiers are simple logistic regression models. They use statistical moments of heart rate that we computed from the WFDB signal file (the `.mat` file) and demographic data taken directly from the WFDB header file (the `.hea` file) as predictors. 
-
-The code uses a Python Online and Offline ECG QRS Detector based on the Pan-Tomkins algorithm. It was created and used for experimental purposes in psychophysiology and psychology. You can find more information in module documentation: https://github.com/c-labpl/qrs_detector
