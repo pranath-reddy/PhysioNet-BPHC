@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import numpy as np
-import joblib
 from get_12ECG_features import get_12ECG_features
+from tensorflow.keras.models import load_model
 
 def run_12ECG_classifier(data,header_data,classes,model):
 
@@ -12,20 +12,22 @@ def run_12ECG_classifier(data,header_data,classes,model):
 
     # Use your classifier here to obtain a label and score for each class. 
     features=np.asarray(get_12ECG_features(data,header_data))
-    feats_reshape = features.reshape(1,-1)
-    label = model.predict(feats_reshape)
+    #feats_reshape = features.reshape(1,-1)
+    #label = model.predict(feats_reshape)
     score = model.predict_proba(feats_reshape)
-
-    current_label[label] = 1
 
     for i in range(num_classes):
         current_score[i] = np.array(score[0][i])
+        
+    for i in range(num_classes):
+        if score[0][i] > 0.5:
+            current_label[i] = 1
 
     return current_label, current_score
 
 def load_12ECG_model():
-    # load the model from disk 
-    filename='finalized_model.sav'
-    loaded_model = joblib.load(filename)
+
+    # load the model from disk
+    loaded_model = load_model('classifier.h5')
 
     return loaded_model
