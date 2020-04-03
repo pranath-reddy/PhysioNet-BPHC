@@ -1,14 +1,12 @@
-#!/usr/bin/env python
-
 import numpy as np
 from scipy.signal import butter, lfilter
 from scipy import stats
+import pandas as pd
 
 def detect_peaks(ecg_measurements,signal_frequency,gain):
 
         """
         Method responsible for extracting peaks from loaded ECG measurements data through measurements processing.
-
         This implementation of a QRS Complex Detector is by no means a certified medical tool and should not be used in health monitoring. 
         It was created and used for experimental purposes in psychophysiology and psychology.
         You can find more information in module documentation:
@@ -16,9 +14,7 @@ def detect_peaks(ecg_measurements,signal_frequency,gain):
         If you use these modules in a research project, please consider citing it:
         https://zenodo.org/record/583770
         If you use these modules in any other project, please refer to MIT open-source license.
-
         If you have any question on the implementation, please refer to:
-
         Michal Sznajder (Jagiellonian University) - technical contact (msznajder@gmail.com)
         Marta lukowska (Jagiellonian University)
         Janko Slavic peak detection algorithm and implementation.
@@ -43,7 +39,6 @@ def detect_peaks(ecg_measurements,signal_frequency,gain):
         LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
         OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
         SOFTWARE.
-
         """
 
 
@@ -87,7 +82,76 @@ def detect_peaks(ecg_measurements,signal_frequency,gain):
 
         return detected_peaks_values,detected_peaks_indices
 
- 
+
+
+"""QRS detection methods."""
+
+def detect_qrs(channel_number, ecg_data_raw, detected_peaks_indices, detected_peaks_values):
+    """
+    Method responsible for classifying detected ECG measurements peaks either as noise or as QRS complex (heart beat).
+    """
+
+    filter_lowcut = 0.001
+    filter_highcut = 15.0
+    filter_order = 1
+    integration_window = 30  # Change proportionally when adjusting frequency (in samples).
+    findpeaks_limit = 0.35
+    findpeaks_spacing = 100  # Change proportionally when adjusting frequency (in samples).
+    refractory_period = 240  # Change proportionally when adjusting frequency (in samples).
+    qrs_peak_filtering_factor = 0.125
+    noise_peak_filtering_factor = 0.125
+    qrs_noise_diff_weight = 0.25
+
+    # Measured and calculated values.
+    self.qrs_peak_value = 0.0
+    self.noise_peak_value = 0.0
+    self.threshold_value = 0.0
+
+    # Detection results.
+    qrs_peaks_indices = np.array([], dtype=int)
+    noise_peaks_indices = np.array([], dtype=int)
+    
+    for detected_peak_index, detected_peaks_value in zip(detected_peaks_indices, detected_peaks_values):
+
+        try:
+            last_qrs_index = qrs_peaks_indices[-1]
+        except IndexError:
+            last_qrs_index = 0
+
+        # After a valid QRS complex detection, there is a 200 ms refractory period before next one can be detected.
+        if detected_peak_index - last_qrs_index > refractory_period or not qrs_peaks_indices.size:
+            # Peak must be classified either as a noise peak or a QRS peak.
+            # To be classified as a QRS peak it must exceed dynamically set threshold value.
+            if detected_peaks_value > self.threshold_value:
+                qrs_peaks_indices = np.append(qrs_peaks_indices, detected_peak_index)
+
+                # Adjust QRS peak value used later for setting QRS-noise threshold.
+                qrs_peak_value = qrs_peak_filtering_factor * detected_peaks_value + \
+                                      (1 - qrs_peak_filtering_factor) * qrs_peak_value
+            else:
+                noise_peaks_indices = np.append(noise_peaks_indices, detected_peak_index)
+
+                # Adjust noise peak value used later for setting QRS-noise threshold.
+                noise_peak_value = noise_peak_filtering_factor * detected_peaks_value + \
+                                        (1 - noise_peak_filtering_factor) * noise_peak_value
+
+            # Adjust QRS-noise threshold value based on previously detected QRS or noise peaks value.
+            threshold_value = noise_peak_value + \
+                                   qrs_noise_diff_weight * (qrs_peak_value - noise_peak_value)
+
+    # Create array containing both input ECG measurements data and QRS detection indication column.
+    # We mark QRS detection with '1' flag in 'qrs_detected' log column ('0' otherwise).
+    measurement_qrs_detection_flag = np.zeros([len(ecg_data_raw[channel_number]), 1])
+    measurement_qrs_detection_flag[qrs_peaks_indices] = 1
+    #print(measurement_qrs_detection_flag)
+    #print(np.reshape(self.ecg_data_raw[self.channel_number, :].transpose(), (7500,1)))
+    ecg_data_detected = np.append(np.reshape(ecg_data_raw[channel_number].transpose(), (ecg_data_raw.shape[1],1)), measurement_qrs_detection_flag, 1)
+
+    return ecg_data_detected, qrs_peaks_indices, noise_peaks_indices
+
+
+
+
 def bandpass_filter(data, lowcut, highcut, signal_freq, filter_order):
         """
         Method responsible for creating and applying Butterworth filter.
@@ -137,6 +201,23 @@ def findpeaks(data, spacing=1, limit=None):
             ind = ind[data[ind] > limit]
         return ind
 
+def segments_extract(data, qrs_peaks_indices):
+    segment = 0
+    
+    for peaks in qrs_peaks_indices:
+        segment = segment + 1
+        
+        peaks = int(peaks)
+        if((peaks-125 < 0) or (peaks+250 > len(signalChannelList[0]))):
+            continue
+        signal = np.zeros((1,peaks_length,375,12))
+        for channelNo in range(0,12):
+            #print(signalChannel[peaks-125:peaks+250])
+            signal[:,segment,:,channelNo] = data[channelNo][peaks-125:peaks+250]
+
+
+    return signal
+
 
 def get_12ECG_features(data, header_data):
 
@@ -163,40 +244,20 @@ def get_12ECG_features(data, header_data):
             else:
                 sex=0
         elif iline.startswith('#Dx'):
-            label = iline.split(': ')[1].split(',')[0]
-
+            labels = iline.split(': ')[1].split(',')
 
     
 #   We are only using data from lead1
     peaks,idx = detect_peaks(data[0],sample_Fs,gain_lead[0])
-   
-#   mean
-    mean_RR = np.mean(idx/sample_Fs*1000)
-    mean_Peaks = np.mean(peaks*gain_lead[0])
 
-#   median
-    median_RR = np.median(idx/sample_Fs*1000)
-    median_Peaks = np.median(peaks*gain_lead[0])
+    ecg_data_detected, qrs_peaks_indices, noise_peaks_indices = detect_qrs(0, data, idx, peaks)
 
-#   standard deviation
-    std_RR = np.std(idx/sample_Fs*1000)
-    std_Peaks = np.std(peaks*gain_lead[0])
+    #Generating Signals from detected peaks [shape of signal(1, no_of_segments, 12, 375)]
+    signal = segments_extract(data, qrs_peaks_indices)
 
-#   variance
-    var_RR = stats.tvar(idx/sample_Fs*1000)
-    var_Peaks = stats.tvar(peaks*gain_lead[0])
 
-#   Skewness
-    skew_RR = stats.skew(idx/sample_Fs*1000)
-    skew_Peaks = stats.skew(peaks*gain_lead[0])
-
-#   Kurtosis
-    kurt_RR = stats.kurtosis(idx/sample_Fs*1000)
-    kurt_Peaks = stats.kurtosis(peaks*gain_lead[0])
-
-    features = np.hstack([age,sex,mean_RR,mean_Peaks,median_RR,median_Peaks,std_RR,std_Peaks,var_RR,var_Peaks,skew_RR,skew_Peaks,kurt_RR,kurt_Peaks])
+    #Autoencoder for feature extraction
+    
 
   
     return features
-
-
