@@ -252,12 +252,70 @@ def get_12ECG_features(data, header_data):
 
     ecg_data_detected, qrs_peaks_indices, noise_peaks_indices = detect_qrs(0, data, idx, peaks)
 
-    #Generating Signals from detected peaks [shape of signal(1, no_of_segments, 12, 375)]
+    #Generating Signals from detected peaks [shape of signal(1, no_of_segments, 375, 12)]
     signal = segments_extract(data, qrs_peaks_indices)
-
-
-    #Autoencoder for feature extraction
+    signal = signal[0]
+    data = signal.reshape(-1,12,375)
     
+    a = data.shape[0]
+    b = data.shape[1]
 
-  
+    data_temp = []
+    for i in range(a):
+        x = []
+        for j in range(b):
+        
+            sample = data[i,j,:]
+            min = np.amin(sample)
+            max = np.amax(sample)
+            range_val = max - min
+            if range_val != 0:
+                x_norm = (sample-min)/range_val
+                x.append(x_norm)
+            
+        if np.asarray(x).shape[0] == 12:
+            data_temp.append(x)
+
+    data = np.asarray(data_temp).reshape(-1,375,12)
+
+    #Code for feature extraction
+    model1 = load_model('./feature_weights/AF_features.h5')
+    model2 = load_model('./feature_weights/AVB_features.h5')
+    model3 = load_model('./feature_weights/LBBB_features.h5')
+    model4 = load_model('./feature_weights/Normal_features.h5')
+    model5 = load_model('./feature_weights/PAC_features.h5')
+    model6 = load_model('./feature_weights/PVC_features.h5')
+    model7 = load_model('./feature_weights/RBBB_features.h5')
+    model8 = load_model('./feature_weights/STD_features.h5')
+    model9 = load_model('./feature_weights/STE_features.h5')
+    
+    featureModel1 = Model(inputs=model1.inputs, outputs=model1.layers[10].output)
+    feature_maps1 = featureModel1.predict(data)
+
+    featureModel2 = Model(inputs=model2.inputs, outputs=model2.layers[10].output)
+    feature_maps2 = featureModel2.predict(data)
+
+    featureModel3 = Model(inputs=model3.inputs, outputs=model3.layers[10].output)
+    feature_maps3 = featureModel3.predict(data)
+
+    featureModel4 = Model(inputs=model4.inputs, outputs=model4.layers[10].output)
+    feature_maps4 = featureModel4.predict(data)
+
+    featureModel5 = Model(inputs=model5.inputs, outputs=model5.layers[10].output)
+    feature_maps5 = featureModel5.predict(data)
+
+    featureModel6 = Model(inputs=model6.inputs, outputs=model6.layers[10].output)
+    feature_maps6 = featureModel6.predict(data)
+
+    featureModel7 = Model(inputs=model7.inputs, outputs=model7.layers[10].output)
+    feature_maps7 = featureModel7.predict(data)
+
+    featureModel8 = Model(inputs=model8.inputs, outputs=model8.layers[10].output)
+    feature_maps8 = featureModel8.predict(data)
+
+    featureModel9 = Model(inputs=model9.inputs, outputs=model9.layers[10].output)
+    feature_maps9 = featureModel9.predict(data)
+
+    features = np.concatenate((feature_maps1, feature_maps2, feature_maps3, feature_maps4, feature_maps5, feature_maps6, feature_maps7, feature_maps8, feature_maps9), axis=1)
+    
     return features
