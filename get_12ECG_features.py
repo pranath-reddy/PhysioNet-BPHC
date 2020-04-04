@@ -226,7 +226,7 @@ def segments_extract(data, qrs_peaks_indices):
             #print("signal ", signal[:,segment,:,channelNo])
         segment = segment + 1
         
-    print("Final Signal ", signal[:,:,:,:])
+    #print("Final Signal ", signal[:,:,:,:])
 
 
     return signal
@@ -236,7 +236,7 @@ def get_12ECG_features(data, header_data):
 
     tmp_hea = header_data[0].split(' ')
     ptID = tmp_hea[0]
-    print("ptID = ", ptID)
+    #print("ptID = ", ptID)
     num_leads = int(tmp_hea[1])
     sample_Fs= int(tmp_hea[2])
     gain_lead = np.zeros(num_leads)
