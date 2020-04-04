@@ -103,9 +103,9 @@ def detect_qrs(channel_number, ecg_data_raw, detected_peaks_indices, detected_pe
     qrs_noise_diff_weight = 0.25
 
     # Measured and calculated values.
-    self.qrs_peak_value = 0.0
-    self.noise_peak_value = 0.0
-    self.threshold_value = 0.0
+    qrs_peak_value = 0.0
+    noise_peak_value = 0.0
+    threshold_value = 0.0
 
     # Detection results.
     qrs_peaks_indices = np.array([], dtype=int)
@@ -122,7 +122,7 @@ def detect_qrs(channel_number, ecg_data_raw, detected_peaks_indices, detected_pe
         if detected_peak_index - last_qrs_index > refractory_period or not qrs_peaks_indices.size:
             # Peak must be classified either as a noise peak or a QRS peak.
             # To be classified as a QRS peak it must exceed dynamically set threshold value.
-            if detected_peaks_value > self.threshold_value:
+            if detected_peaks_value > threshold_value:
                 qrs_peaks_indices = np.append(qrs_peaks_indices, detected_peak_index)
 
                 # Adjust QRS peak value used later for setting QRS-noise threshold.
@@ -203,17 +203,30 @@ def findpeaks(data, spacing=1, limit=None):
 
 def segments_extract(data, qrs_peaks_indices):
     segment = 0
-    
+    peaks_length = 0
+
     for peaks in qrs_peaks_indices:
-        segment = segment + 1
+        if((peaks-125 < 0) or (peaks+250 > len(data[0]))):
+            continue
+        else:
+            peaks_length = peaks_length + 1
+    signal = np.zeros((1,peaks_length,375,12))
+    for peaks in qrs_peaks_indices:
         
         peaks = int(peaks)
-        if((peaks-125 < 0) or (peaks+250 > len(signalChannelList[0]))):
+        if((peaks-125 < 0) or (peaks+250 > len(data[0]))):
+            #print("segment = ", segment)
             continue
-        signal = np.zeros((1,peaks_length,375,12))
         for channelNo in range(0,12):
             #print(signalChannel[peaks-125:peaks+250])
             signal[:,segment,:,channelNo] = data[channelNo][peaks-125:peaks+250]
+            #print("segment = ", segment)
+            #print("channelNo = ", channelNo)
+            #print("signal shape ", signal.shape)
+            #print("signal ", signal[:,segment,:,channelNo])
+        segment = segment + 1
+        
+    #print("Final Signal ", signal[:,:,:,:])
 
 
     return signal
@@ -223,6 +236,7 @@ def get_12ECG_features(data, header_data):
 
     tmp_hea = header_data[0].split(' ')
     ptID = tmp_hea[0]
+    #print("ptID = ", ptID)
     num_leads = int(tmp_hea[1])
     sample_Fs= int(tmp_hea[2])
     gain_lead = np.zeros(num_leads)
@@ -252,6 +266,7 @@ def get_12ECG_features(data, header_data):
 
     ecg_data_detected, qrs_peaks_indices, noise_peaks_indices = detect_qrs(0, data, idx, peaks)
 
+    #print("detected qrs indices ", qrs_peaks_indices)
     #Generating Signals from detected peaks [shape of signal(1, no_of_segments, 375, 12)]
     signal = segments_extract(data, qrs_peaks_indices)
     signal = signal[0]
