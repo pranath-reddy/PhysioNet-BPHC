@@ -295,6 +295,7 @@ def get_12ECG_features(data, header_data):
 
     data = np.asarray(data_temp).reshape(-1,375,12)
 
+    '''
     #Code for feature extraction
     model1 = load_model('./feature_weights/AF_features.h5')
     model2 = load_model('./feature_weights/AVB_features.h5')
@@ -334,5 +335,10 @@ def get_12ECG_features(data, header_data):
     feature_maps9 = featureModel9.predict(data)
 
     features = np.concatenate((feature_maps1, feature_maps2, feature_maps3, feature_maps4, feature_maps5, feature_maps6, feature_maps7, feature_maps8, feature_maps9), axis=1)
+    '''
+    
+    model = load_model('./FE_Model.h5')
+    featureModel = Model(inputs=model.inputs, outputs=model.layers[8].output)
+    features = featureModel.predict(x_train)
     
     return features
