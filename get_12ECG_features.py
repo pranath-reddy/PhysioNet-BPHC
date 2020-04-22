@@ -339,6 +339,6 @@ def get_12ECG_features(data, header_data):
     
     model = load_model('./FE_Model.h5')
     featureModel = Model(inputs=model.inputs, outputs=model.layers[8].output)
-    features = featureModel.predict(x_train)
+    features = featureModel.predict(data)
     
     return features
