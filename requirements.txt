@@ -4,4 +4,4 @@ joblib==0.13.2
 Cython==0.29.13
 pandas==0.25.3
 scikit-learn==0.21.3
-tensorflow==2.2.0
+tensorflow==2.2.0rc3
