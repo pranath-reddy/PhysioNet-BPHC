@@ -303,6 +303,10 @@ def get_12ECG_features(data, header_data, fe_model):
     
     model = fe_model
     featureModel = Model(inputs=model.inputs, outputs=model.layers[8].output)
-    features = featureModel.predict(data)
+
+    if data.shape[0] != 0:
+        features = featureModel.predict(data)
+    else:
+        features = np.zeros(64).reshape(1, -1)
     
     return features
