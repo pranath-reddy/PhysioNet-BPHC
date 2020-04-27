@@ -4,6 +4,7 @@ from scipy import stats
 import pandas as pd
 from tensorflow.keras.models import load_model
 from tensorflow.keras.models import Model
+from datetime import datetime
 
 def detect_peaks(ecg_measurements,signal_frequency,gain):
 
@@ -234,7 +235,7 @@ def segments_extract(data, qrs_peaks_indices):
     return signal
 
 
-def get_12ECG_features(data, header_data):
+def get_12ECG_features(data, header_data, fe_model):
 
     tmp_hea = header_data[0].split(' ')
     ptID = tmp_hea[0]
@@ -294,50 +295,13 @@ def get_12ECG_features(data, header_data):
             data_temp.append(x)
 
     data = np.asarray(data_temp).reshape(-1,375,12)
-
-    '''
-    #Code for feature extraction
-    model1 = load_model('./feature_weights/AF_features.h5')
-    model2 = load_model('./feature_weights/AVB_features.h5')
-    model3 = load_model('./feature_weights/LBBB_features.h5')
-    model4 = load_model('./feature_weights/Normal_features.h5')
-    model5 = load_model('./feature_weights/PAC_features.h5')
-    model6 = load_model('./feature_weights/PVC_features.h5')
-    model7 = load_model('./feature_weights/RBBB_features.h5')
-    model8 = load_model('./feature_weights/STD_features.h5')
-    model9 = load_model('./feature_weights/STE_features.h5')
     
-    featureModel1 = Model(inputs=model1.inputs, outputs=model1.layers[10].output)
-    feature_maps1 = featureModel1.predict(data)
+    now = datetime.now()
 
-    featureModel2 = Model(inputs=model2.inputs, outputs=model2.layers[10].output)
-    feature_maps2 = featureModel2.predict(data)
-
-    featureModel3 = Model(inputs=model3.inputs, outputs=model3.layers[10].output)
-    feature_maps3 = featureModel3.predict(data)
-
-    featureModel4 = Model(inputs=model4.inputs, outputs=model4.layers[10].output)
-    feature_maps4 = featureModel4.predict(data)
-
-    featureModel5 = Model(inputs=model5.inputs, outputs=model5.layers[10].output)
-    feature_maps5 = featureModel5.predict(data)
-
-    featureModel6 = Model(inputs=model6.inputs, outputs=model6.layers[10].output)
-    feature_maps6 = featureModel6.predict(data)
-
-    featureModel7 = Model(inputs=model7.inputs, outputs=model7.layers[10].output)
-    feature_maps7 = featureModel7.predict(data)
-
-    featureModel8 = Model(inputs=model8.inputs, outputs=model8.layers[10].output)
-    feature_maps8 = featureModel8.predict(data)
-
-    featureModel9 = Model(inputs=model9.inputs, outputs=model9.layers[10].output)
-    feature_maps9 = featureModel9.predict(data)
-
-    features = np.concatenate((feature_maps1, feature_maps2, feature_maps3, feature_maps4, feature_maps5, feature_maps6, feature_maps7, feature_maps8, feature_maps9), axis=1)
-    '''
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
     
-    model = load_model('./FE_Model.h5')
+    model = fe_model
     featureModel = Model(inputs=model.inputs, outputs=model.layers[8].output)
     features = featureModel.predict(data)
     
